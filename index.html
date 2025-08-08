@@ -1,112 +1,168 @@
+import tkinter as tk
+from tkinter import messagebox
+from tkinter import ttk
+from PIL import Image, ImageTk
 
-<!DOCTYPE html>
-<html lang="es">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Simulador de Financiamiento</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      margin: 0;
-      padding: 0;
-      background: url('fondo.jpg') no-repeat center center fixed;
-      background-size: cover;
-      color: white;
-    }
-    .contenedor {
-      background-color: rgba(0, 0, 0, 0.6);
-      padding: 20px;
-      border-radius: 12px;
-      max-width: 400px;
-      margin: 40px auto;
-    }
-    h1 {
-      text-align: center;
-      margin-bottom: 25px;
-    }
-    label {
-      display: block;
-      margin-top: 15px;
-      font-weight: bold;
-    }
-    input[type="number"] {
-      width: 100%;
-      padding: 10px;
-      font-size: 1.1em;
-      margin-top: 5px;
-      border-radius: 6px;
-      border: none;
-    }
-    button {
-      margin-top: 25px;
-      width: 100%;
-      padding: 15px;
-      font-size: 1.3em;
-      border: none;
-      border-radius: 8px;
-      background-color: #28a745;
-      color: white;
-      font-weight: bold;
-      cursor: pointer;
-    }
-    button:hover {
-      background-color: #218838;
-    }
-    #resultado {
-      margin-top: 30px;
-      font-size: 1.4em;
-      font-weight: bold;
-      text-align: center;
-    }
-  </style>
-</head>
-<body>
+# Garantía Línea Blanca (filtrada desde 24 meses en adelante)
+garantia_linea_blanca = {
+    24: 22000.0,
+    36: 26000.0,
+    48: 31000.0,
+    60: 34500.0
+}
 
-<div class="contenedor">
-  <h1>Simulador de Financiamiento</h1>
+class AplicacionMovil:
+    def __init__(self):
+        self.ventana = tk.Tk()
+        self.ventana.title("Simulador Financiamiento")
+        self.ventana.geometry("360x750")
+        self.ventana.minsize(320, 620)
+        self.ventana.resizable(True, True)
 
-  <label for="monto">Monto de compra:</label>
-  <input type="number" id="monto" min="0" step="any" />
+        # Cargar imagen fondo
+        try:
+            self.imagen_original = Image.open("Fondo.JPEG")
+        except Exception as e:
+            messagebox.showerror("Error", f"No se encontró la imagen 'fondo.jpg'\n{e}")
+            self.ventana.destroy()
+            return
 
-  <label for="prima">Prima:</label>
-  <input type="number" id="prima" min="0" step="any" />
+        imagen_redimensionada = self.imagen_original.resize((360, 750))
+        self.imagen_fondo = ImageTk.PhotoImage(imagen_redimensionada)
 
-  <label for="tasa">Tasa de interés (% anual):</label>
-  <input type="number" id="tasa" min="0" step="any" />
+        self.label_fondo = tk.Label(self.ventana, image=self.imagen_fondo)
+        self.label_fondo.place(x=0, y=0, relwidth=1, relheight=1)
 
-  <label for="plazo">Plazo (meses):</label>
-  <input type="number" id="plazo" min="1" step="1" />
+        self.ventana.bind("<Configure>", self.redimensionar)
 
-  <button onclick="calcularCuota()">Calcular Cuota</button>
+        # Frame principal
+        self.frame = tk.Frame(self.ventana, bg="#ffffff", bd=6, relief="ridge")
+        self.frame.pack(padx=20, pady=20, fill="both", expand=True)
 
-  <div id="resultado"></div>
-</div>
+        self.crear_widgets()
 
-<script>
-  function calcularCuota() {
-    const monto = parseFloat(document.getElementById('monto').value);
-    const prima = parseFloat(document.getElementById('prima').value);
-    const tasaAnual = parseFloat(document.getElementById('tasa').value);
-    const plazo = parseInt(document.getElementById('plazo').value);
+        self.ventana.mainloop()
 
-    if (isNaN(monto) || isNaN(prima) || isNaN(tasaAnual) || isNaN(plazo)) {
-      alert('Por favor, complete todos los campos con valores válidos.');
-      return;
-    }
+    def redimensionar(self, event):
+        if event.width > 0 and event.height > 0:
+            imagen_redimensionada = self.imagen_original.resize((event.width, event.height))
+            self.imagen_fondo = ImageTk.PhotoImage(imagen_redimensionada)
+            self.label_fondo.config(image=self.imagen_fondo)
+            self.label_fondo.image = self.imagen_fondo
 
-    if (prima >= monto) {
-      alert('La prima no puede ser mayor o igual al monto de compra.');
-      return;
-    }
+    def crear_widgets(self):
+        font_label = ("Arial", 14)
+        font_entry = ("Arial", 14)
+        font_boton = ("Arial", 16, "bold")
 
-    const tasaMensual = tasaAnual / 100 / 12;
-    const montoFinanciado = monto - prima;
+        # Campos principales
+        textos = ["Monto de compra:", "Prima:", "Tasa de interés (%):", "Plazo (meses):"]
+        self.entradas = []
 
-    const cuota = montoFinanciado * tasaMensual / (1 - Math.pow(1 + tasaMensual, -plazo));
-    document.getElementById('resultado').textContent = `Cuota mensual: ₡${cuota.toFixed(2)}`;
-  }
-</script>
+        for texto in textos:
+            lbl = tk.Label(self.frame, text=texto, font=font_label, bg="#ffffff")
+            lbl.pack(anchor="w", pady=(10, 2), padx=10)
 
-</body>
-</html>
+            ent = tk.Entry(self.frame, font=font_entry, relief="solid", bd=2)
+            ent.pack(fill="x", padx=10, pady=(0, 10))
+            ent.bind("<FocusIn>", lambda e, widget=ent: widget.config(highlightcolor="#4CAF50", highlightthickness=3))
+            ent.bind("<FocusOut>", lambda e, widget=ent: widget.config(highlightthickness=0))
+
+            self.entradas.append(ent)
+
+        self.entrada_compra = self.entradas[0]
+        self.entrada_prima = self.entradas[1]
+        self.entrada_tasa = self.entradas[2]
+        self.entrada_plazo = self.entradas[3]
+
+        # Selección categoría
+        lbl_cat = tk.Label(self.frame, text="Categoría del producto:", font=font_label, bg="#ffffff")
+        lbl_cat.pack(anchor="w", pady=(10, 2), padx=10)
+
+        self.categoria = tk.StringVar(value="Otro")
+        combo_categoria = ttk.Combobox(
+            self.frame, textvariable=self.categoria,
+            values=["Línea Blanca", "Otro"], state="readonly", font=font_entry
+        )
+        combo_categoria.pack(fill="x", padx=10, pady=(0, 10))
+        combo_categoria.bind("<<ComboboxSelected>>", self.mostrar_garantia)
+
+        # Sección garantía (solo aparece si Línea Blanca)
+        self.lbl_info_garantia = tk.Label(
+            self.frame, text="Garantía únicamente para Línea Blanca",
+            font=("Arial", 12, "italic"), bg="#ffffff", fg="blue"
+        )
+        self.opcion_garantia = tk.StringVar(value="No")
+        self.combo_garantia = ttk.Combobox(
+            self.frame, textvariable=self.opcion_garantia,
+            values=["No", "Sí"], state="readonly", font=font_entry
+        )
+        self.combo_garantia.bind("<<ComboboxSelected>>", self.mostrar_plazo_garantia)
+
+        self.lbl_plazo_garantia = tk.Label(self.frame, text="Plazo garantía (meses):", font=font_label, bg="#ffffff")
+        self.combo_plazo_garantia = ttk.Combobox(
+            self.frame, values=list(garantia_linea_blanca.keys()), state="readonly", font=font_entry
+        )
+
+        # Botón calcular
+        boton = tk.Button(self.frame, text="Calcular", font=font_boton, bg="#4CAF50", fg="white",
+                          activebackground="#45a049", cursor="hand2", command=self.calcular)
+        boton.pack(fill="x", padx=20, pady=20)
+
+        # Resultado
+        self.resultado = tk.Label(self.frame, text="", fg="green", font=("Arial", 14, "bold"), bg="#ffffff", justify="left")
+        self.resultado.pack(pady=10)
+
+    def mostrar_garantia(self, event):
+        if self.categoria.get() == "Línea Blanca":
+            self.lbl_info_garantia.pack(anchor="w", pady=(5, 2), padx=10)
+            self.combo_garantia.pack(fill="x", padx=10, pady=(0, 10))
+        else:
+            self.lbl_info_garantia.pack_forget()
+            self.combo_garantia.pack_forget()
+            self.lbl_plazo_garantia.pack_forget()
+            self.combo_plazo_garantia.pack_forget()
+
+    def mostrar_plazo_garantia(self, event):
+        if self.opcion_garantia.get() == "Sí":
+            self.lbl_plazo_garantia.pack(anchor="w", pady=(5, 2), padx=10)
+            self.combo_plazo_garantia.pack(fill="x", padx=10, pady=(0, 10))
+        else:
+            self.lbl_plazo_garantia.pack_forget()
+            self.combo_plazo_garantia.pack_forget()
+
+    def calcular(self):
+        try:
+            monto = float(self.entrada_compra.get())
+            prima = float(self.entrada_prima.get())
+            tasa = float(self.entrada_tasa.get()) / 100 / 12
+            plazo = int(self.entrada_plazo.get())
+
+            monto_financiado = monto - prima
+            if monto_financiado <= 0:
+                raise ValueError("La prima no puede ser mayor o igual al monto.")
+
+            # Cuota producto
+            cuota_producto = monto_financiado * tasa / (1 - (1 + tasa) ** -plazo)
+
+            cuota_garantia = 0
+            if self.categoria.get() == "Línea Blanca" and self.opcion_garantia.get() == "Sí":
+                try:
+                    plazo_garantia = int(self.combo_plazo_garantia.get())
+                    valor_garantia = garantia_linea_blanca.get(plazo_garantia, 0)
+                    cuota_garantia = valor_garantia / plazo_garantia
+                except ValueError:
+                    raise ValueError("Debe seleccionar un plazo para la garantía.")
+
+            cuota_total = cuota_producto + cuota_garantia
+
+            self.resultado.config(text=(
+                f"Cuota producto: ₡{cuota_producto:,.2f}\n"
+                f"Cuota garantía: ₡{cuota_garantia:,.2f}\n"
+                f"TOTAL mensual: ₡{cuota_total:,.2f}"
+            ))
+        except Exception as e:
+            messagebox.showerror("Error", f"Datos inválidos: {e}")
+
+if __name__ == "__main__":
+    AplicacionMovil()
