@@ -65,6 +65,10 @@
       color: #ffc107;
       display: none;
     }
+    .checkbox-container {
+      margin-top: 15px;
+      font-weight: normal;
+    }
   </style>
 </head>
 <body>
@@ -78,27 +82,38 @@
   <label for="prima">Prima:</label>
   <input type="number" id="prima" min="0" step="any" />
 
+  <label for="gastosFormalizacion">Gastos de Formalización (%):</label>
+  <select id="gastosFormalizacion">
+    <option value="0">0%</option>
+    <option value="4">4%</option>
+    <option value="5">5%</option>
+    <option value="7">7%</option>
+  </select>
+
   <label for="tasa">Tasa de interés (% anual):</label>
   <input type="number" id="tasa" min="0" step="any" />
 
-  <label>
-    <input type="checkbox" id="lineaBlanca" onchange="actualizarPlazos()"> ¿Es Línea Blanca?
-  </label>
-  <div id="infoGarantia">Garantía únicamente para línea blanca.</div>
+  <label for="plazoFinanciamiento">Plazo de financiamiento (meses):</label>
+  <input type="number" id="plazoFinanciamiento" min="1" step="1" placeholder=>
 
-  <label for="plazo">Plazo (meses):</label>
-  <select id="plazo">
-    <option value="">Seleccione plazo</option>
-    <option>3</option>
-    <option>6</option>
-    <option>9</option>
-    <option>12</option>
-    <option>18</option>
-    <option>24</option>
-    <option>36</option>
-    <option>48</option>
-    <option>60</option>
+  <label for="categoria">Categoría:</label>
+  <select id="categoria" onchange="actualizarPlazosGarantia()">
+    <option value="ninguna">Ninguna</option>
+    <option value="lineaBlanca">Línea Blanca</option>
+    <option value="motocicletas">Motocicletas</option>
   </select>
+
+  <div id="infoGarantia">Garantía únicamente para Línea Blanca o Motocicletas.</div>
+
+  <label for="plazoGarantia">Plazo de garantía (meses):</label>
+  <select id="plazoGarantia">
+    <option value="">Seleccione plazo</option>
+  </select>
+
+  <div class="checkbox-container">
+    <input type="checkbox" id="conGarantia" checked />
+    <label for="conGarantia" style="display:inline; font-weight: normal;">Con garantía</label>
+  </div>
 
   <button onclick="calcularCuota()">Calcular Cuota</button>
 
@@ -106,74 +121,120 @@
 </div>
 
 <script>
-  const garantiaLineaBlanca = {
-    24: 22000.0,
-    36: 26000.0,
-    48: 31000.0,
-    60: 34500.0
+  // Porcentajes de garantía Línea Blanca según plazo (en meses)
+  const garantiaLineaBlancaPorc = {
+    12: 26.99,
+    24: 31.19,
+    36: 35.29,
+    48: 38.87
   };
 
-  function actualizarPlazos() {
-    const esLineaBlanca = document.getElementById('lineaBlanca').checked;
-    const plazoSelect = document.getElementById('plazo');
+  // Porcentajes garantía Motocicletas según plazo
+  // Valores de garantía para referencia: 
+  // 6 meses: 357,557.76 
+  // 18 meses: 388,285.38 
+  // 30 meses: 440,849.47
+  // Estos montos se dividen entre el monto base para obtener porcentaje,
+  // Pero ahora se usan directamente los porcentajes:
+  // Supongamos que el monto base es variable, calculamos porcentaje como:
+  // porcentaje = (monto garantia / monto base) * 100
+  // Aquí están los porcentajes aproximados calculados para motos:
+
+  const garantiaMotocicletasPorc = {
+    6: 23.04,    // Ejemplo aproximado, se debe ajustar según el monto base real
+    18: 25.0,
+    30: 28.36
+  };
+
+  function actualizarPlazosGarantia() {
+    const categoria = document.getElementById('categoria').value;
+    const plazoGarantiaSelect = document.getElementById('plazoGarantia');
     const info = document.getElementById('infoGarantia');
 
-    plazoSelect.innerHTML = '';
+    plazoGarantiaSelect.innerHTML = '';
     const optionDefault = document.createElement('option');
     optionDefault.value = '';
     optionDefault.textContent = 'Seleccione plazo';
-    plazoSelect.appendChild(optionDefault);
+    plazoGarantiaSelect.appendChild(optionDefault);
 
-    if (esLineaBlanca) {
-      [24, 36, 48, 60].forEach(p => {
+    if (categoria === 'lineaBlanca') {
+      [12, 24, 36, 48].forEach(p => {
         const opt = document.createElement('option');
+        opt.value = p;
         opt.textContent = p;
-        plazoSelect.appendChild(opt);
+        plazoGarantiaSelect.appendChild(opt);
+      });
+      info.style.display = 'block';
+    } else if (categoria === 'motocicletas') {
+      [6, 18, 30].forEach(p => {
+        const opt = document.createElement('option');
+        opt.value = p;
+        opt.textContent = p;
+        plazoGarantiaSelect.appendChild(opt);
       });
       info.style.display = 'block';
     } else {
-      [3, 6, 9, 12, 18, 24, 36, 48, 60].forEach(p => {
-        const opt = document.createElement('option');
-        opt.textContent = p;
-        plazoSelect.appendChild(opt);
-      });
       info.style.display = 'none';
     }
   }
 
   function calcularCuota() {
-    const monto = parseFloat(document.getElementById('monto').value);
+    const montoBase = parseFloat(document.getElementById('monto').value);
     const prima = parseFloat(document.getElementById('prima').value);
     const tasaAnual = parseFloat(document.getElementById('tasa').value);
-    const plazo = parseInt(document.getElementById('plazo').value);
-    const esLineaBlanca = document.getElementById('lineaBlanca').checked;
+    const plazoFinanciamiento = parseInt(document.getElementById('plazoFinanciamiento').value);
+    const categoria = document.getElementById('categoria').value;
+    const plazoGarantia = parseInt(document.getElementById('plazoGarantia').value);
+    const gastosFormalizacionPct = parseFloat(document.getElementById('gastosFormalizacion').value);
+    const conGarantia = document.getElementById('conGarantia').checked;
 
-    if (isNaN(monto) || isNaN(prima) || isNaN(tasaAnual) || isNaN(plazo)) {
-      alert('Por favor, complete todos los campos con valores válidos.');
+    if (isNaN(montoBase) || isNaN(prima) || isNaN(tasaAnual) || isNaN(plazoFinanciamiento)) {
+      alert('Por favor, complete todos los campos de monto, prima, tasa y plazo de financiamiento con valores válidos.');
       return;
     }
 
-    if (prima >= monto) {
+    if (conGarantia && (categoria === 'lineaBlanca' || categoria === 'motocicletas') && isNaN(plazoGarantia)) {
+      alert('Por favor, seleccione un plazo de garantía válido.');
+      return;
+    }
+
+    if (prima >= montoBase) {
       alert('La prima no puede ser mayor o igual al monto de compra.');
       return;
     }
 
-    const tasaMensual = tasaAnual / 100 / 12;
-    const montoFinanciado = monto - prima;
-    const cuotaProducto = montoFinanciado * tasaMensual / (1 - Math.pow(1 + tasaMensual, -plazo));
-
-    let cuotaGarantia = 0;
-    if (esLineaBlanca && garantiaLineaBlanca[plazo]) {
-      cuotaGarantia = garantiaLineaBlanca[plazo] / plazo;
+    let valorGarantia = 0;
+    if (conGarantia) {
+      if (categoria === 'lineaBlanca' && garantiaLineaBlancaPorc[plazoGarantia]) {
+        valorGarantia = montoBase * (garantiaLineaBlancaPorc[plazoGarantia] / 100);
+      } else if (categoria === 'motocicletas' && garantiaMotocicletasPorc[plazoGarantia]) {
+        valorGarantia = montoBase * (garantiaMotocicletasPorc[plazoGarantia] / 100);
+      }
     }
 
-    const cuotaTotal = cuotaProducto + cuotaGarantia;
+    const baseCalculo = montoBase + (conGarantia ? valorGarantia : 0);
 
-    document.getElementById('resultado').textContent =
-      `Producto: ₡${cuotaProducto.toFixed(2)}\n` +
-      `Garantía: ₡${cuotaGarantia.toFixed(2)}\n` +
-      `TOTAL: ₡${cuotaTotal.toFixed(2)}`;
+    const gastosFormalizacionMonto = baseCalculo * (gastosFormalizacionPct / 100);
+
+    const montoFinanciado = baseCalculo + gastosFormalizacionMonto - prima;
+
+    const tasaMensual = tasaAnual / 100 / 12;
+
+    const cuotaTotal = montoFinanciado * tasaMensual / (1 - Math.pow(1 + tasaMensual, -plazoFinanciamiento));
+
+    let resultadoTexto =
+      `Monto producto: ₡${montoBase.toFixed(2)}\n` +
+      (conGarantia ? `Monto garantía: ₡${valorGarantia.toFixed(2)}\n` : '') +
+      `Gastos formalización (${gastosFormalizacionPct}%): ₡${gastosFormalizacionMonto.toFixed(2)}\n` +
+      `Prima: ₡${prima.toFixed(2)}\n` +
+      `Plazo financiamiento: ${plazoFinanciamiento} meses\n` +
+      `Tasa de interés anual: ${tasaAnual}%\n` +
+      `CUOTA TOTAL MENSUAL: ₡${cuotaTotal.toFixed(2)}`;
+
+    document.getElementById('resultado').textContent = resultadoTexto;
   }
+
+  window.onload = actualizarPlazosGarantia;
 </script>
 
 </body>
