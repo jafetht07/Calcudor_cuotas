@@ -7,13 +7,14 @@
   <style>
     body {
       font-family: Arial, sans-serif;
-      margin: 0; padding: 0;
+      margin: 0;
+      padding: 0;
       background: url('fondo.jpg') no-repeat center center fixed;
       background-size: cover;
       color: white;
     }
     .contenedor {
-      background-color: rgba(0,0,0,0.6);
+      background-color: rgba(0, 0, 0, 0.6);
       padding: 20px;
       border-radius: 12px;
       max-width: 400px;
@@ -66,7 +67,20 @@
     }
     .checkbox-container {
       margin-top: 15px;
+    }
+    .checkbox-container label {
+      display: inline-block;
+      background-color: #28a745;
+      color: white;
+      padding: 8px 12px;
+      border-radius: 8px;
+      cursor: pointer;
       font-weight: normal;
+      user-select: none;
+    }
+    .checkbox-container input[type="checkbox"] {
+      margin-right: 8px;
+      vertical-align: middle;
     }
   </style>
 </head>
@@ -93,7 +107,7 @@
   <input type="number" id="tasa" min="0" step="any" />
 
   <label for="plazoFinanciamiento">Plazo de financiamiento (meses):</label>
-  <input type="number" id="plazoFinanciamiento" min="1" step="1" placeholder="Ej: 12" />
+  <input type="number" id="plazoFinanciamiento" min="1" step="1" placeholder="Ejemplo: 12" />
 
   <label for="categoria">Categoría:</label>
   <select id="categoria" onchange="actualizarPlazosGarantia()">
@@ -102,13 +116,13 @@
     <option value="motocicletas">Motocicletas</option>
     <option value="celulares">Celulares</option>
     <option value="audioVideo">Audio y Video</option>
-    <option value="electroPequeno">Electro pequeño</option>
-    <option value="mueblesColchones">Muebles y colchones</option>
+    <option value="electroPequeno">Electro Pequeño</option>
+    <option value="mueblesColchones">Muebles y Colchones</option>
     <option value="videoJuegos">Video Juegos</option>
     <option value="bicicletas">Bicicletas</option>
   </select>
 
-  <div id="infoGarantia">Garantía disponible solo para algunas categorías.</div>
+  <div id="infoGarantia">Garantía únicamente para categorías con plazo de garantía.</div>
 
   <label for="plazoGarantia">Plazo de garantía (meses):</label>
   <select id="plazoGarantia">
@@ -116,8 +130,10 @@
   </select>
 
   <div class="checkbox-container">
-    <input type="checkbox" id="conGarantia" checked />
-    <label for="conGarantia" style="display:inline; font-weight: normal;">Con Garantia Extendida</label>
+    <label for="conGarantia">
+      <input type="checkbox" id="conGarantia" checked />
+      Con Garantía Extendida
+    </label>
   </div>
 
   <button onclick="calcularCuota()">Calcular Cuota</button>
@@ -126,15 +142,58 @@
 </div>
 
 <script>
-  const garantiasPorcentaje = {
-    lineaBlanca: { 12: 26.99, 24: 31.19, 36: 35.29, 48: 38.87 },
-    motocicletas: { 6: 23.04, 18: 25.00, 30: 28.36 },
-    celulares: { 12: 32.98, 24: 41.05 },
-    audioVideo: { 12: 30.00, 24: 34.08, 36: 44.28 },
-    electroPequeno: { 12: 29.03, 24: 36.01 },
-    mueblesColchones: { 12: 24.85, 24: 31.20, 36: 38.17 },
-    videoJuegos: { 12: 32.06, 24: 39.13 },
-    bicicletas: { 12: 28.07, 24: 31.20, 36: 36.01 }
+  // Porcentajes de garantía Línea Blanca según plazo (en meses)
+  const garantiaLineaBlancaPorc = {
+    12: 26.99,
+    24: 31.19,
+    36: 35.29,
+    48: 38.87
+  };
+
+  // Porcentajes garantía Motocicletas según plazo
+  const garantiaMotocicletasPorc = {
+    6: 23.04,
+    18: 25.0,
+    30: 28.36
+  };
+
+  // Porcentajes garantía Celulares
+  const garantiaCelularesPorc = {
+    12: (19767 / 59900) * 100,      // ≈ 32.99%
+    24: (24582.96 / 59900) * 100   // ≈ 41.05%
+  };
+
+  // Porcentajes garantía Audio y Video
+  const garantiaAudioVideoPorc = {
+    12: (68970 / 229900) * 100,    // ≈ 30.0%
+    24: (78349.92 / 229900) * 100, // ≈ 34.07%
+    36: (101799.72 / 229900) * 100 // ≈ 44.26%
+  };
+
+  // Porcentajes garantía Electro Pequeño
+  const garantiaElectroPequenoPorc = {
+    12: (34818.96 / 119900) * 100, // ≈ 29.04%
+    24: (43164 / 119900) * 100     // ≈ 36.02%
+  };
+
+  // Porcentajes garantía Muebles y Colchones
+  const garantiaMueblesColchonesPorc = {
+    12: (74772.32 / 300900) * 100,  // ≈ 24.86%
+    24: (93880 / 300900) * 100,     // ≈ 31.20%
+    36: (114823.44 / 300900) * 100  // ≈ 38.16%
+  };
+
+  // Porcentajes garantía Video Juegos
+  const garantiaVideoJuegosPorc = {
+    12: (105699.96 / 329900) * 100,  // ≈ 32.05%
+    24: (129056.88 / 329900) * 100   // ≈ 39.13%
+  };
+
+  // Porcentajes garantía Bicicletas
+  const garantiaBicicletasPorc = {
+    12: (33667.92 / 119900) * 100,  // ≈ 28.07%
+    24: (37408.80 / 119900) * 100,  // ≈ 31.22%
+    36: (43164 / 119900) * 100      // ≈ 36.02%
   };
 
   function actualizarPlazosGarantia() {
@@ -148,8 +207,39 @@
     optionDefault.textContent = 'Seleccione plazo';
     plazoGarantiaSelect.appendChild(optionDefault);
 
-    if (garantiasPorcentaje[categoria]) {
-      Object.keys(garantiasPorcentaje[categoria]).forEach(p => {
+    let plazos = [];
+
+    switch(categoria) {
+      case 'lineaBlanca':
+        plazos = [12, 24, 36, 48];
+        break;
+      case 'motocicletas':
+        plazos = [6, 18, 30];
+        break;
+      case 'celulares':
+        plazos = [12, 24];
+        break;
+      case 'audioVideo':
+        plazos = [12, 24, 36];
+        break;
+      case 'electroPequeno':
+        plazos = [12, 24];
+        break;
+      case 'mueblesColchones':
+        plazos = [12, 24, 36];
+        break;
+      case 'videoJuegos':
+        plazos = [12, 24];
+        break;
+      case 'bicicletas':
+        plazos = [12, 24, 36];
+        break;
+      default:
+        plazos = [];
+    }
+
+    if(plazos.length > 0){
+      plazos.forEach(p => {
         const opt = document.createElement('option');
         opt.value = p;
         opt.textContent = p;
@@ -176,7 +266,7 @@
       return;
     }
 
-    if (conGarantia && garantiasPorcentaje[categoria] && isNaN(plazoGarantia)) {
+    if (conGarantia && plazoGarantiaSelectVisible() && isNaN(plazoGarantia)) {
       alert('Por favor, seleccione un plazo de garantía válido.');
       return;
     }
@@ -187,27 +277,62 @@
     }
 
     let valorGarantia = 0;
-    if (conGarantia && garantiasPorcentaje[categoria] && garantiasPorcentaje[categoria][plazoGarantia]) {
-      valorGarantia = montoBase * (garantiasPorcentaje[categoria][plazoGarantia] / 100);
+    if (conGarantia) {
+      switch(categoria) {
+        case 'lineaBlanca':
+          valorGarantia = montoBase * (garantiaLineaBlancaPorc[plazoGarantia] || 0) / 100;
+          break;
+        case 'motocicletas':
+          valorGarantia = montoBase * (garantiaMotocicletasPorc[plazoGarantia] || 0) / 100;
+          break;
+        case 'celulares':
+          valorGarantia = montoBase * (garantiaCelularesPorc[plazoGarantia] || 0) / 100;
+          break;
+        case 'audioVideo':
+          valorGarantia = montoBase * (garantiaAudioVideoPorc[plazoGarantia] || 0) / 100;
+          break;
+        case 'electroPequeno':
+          valorGarantia = montoBase * (garantiaElectroPequenoPorc[plazoGarantia] || 0) / 100;
+          break;
+        case 'mueblesColchones':
+          valorGarantia = montoBase * (garantiaMueblesColchonesPorc[plazoGarantia] || 0) / 100;
+          break;
+        case 'videoJuegos':
+          valorGarantia = montoBase * (garantiaVideoJuegosPorc[plazoGarantia] || 0) / 100;
+          break;
+        case 'bicicletas':
+          valorGarantia = montoBase * (garantiaBicicletasPorc[plazoGarantia] || 0) / 100;
+          break;
+        default:
+          valorGarantia = 0;
+      }
     }
 
-    const saldoFinanciar = (montoBase - prima) + valorGarantia;
-    const gastosFormalizacionMonto = saldoFinanciar * (gastosFormalizacionPct / 100);
-    const montoFinanciado = saldoFinanciar + gastosFormalizacionMonto;
+    const baseCalculo = montoBase - prima + (conGarantia ? valorGarantia : 0);
+
+    const gastosFormalizacionMonto = baseCalculo * (gastosFormalizacionPct / 100);
+
+    const montoFinanciado = baseCalculo + gastosFormalizacionMonto;
 
     const tasaMensual = tasaAnual / 100 / 12;
-    const cuotaMensual = montoFinanciado * tasaMensual / (1 - Math.pow(1 + tasaMensual, -plazoFinanciamiento));
 
-    let resultadoTexto = 
+    const cuotaTotal = montoFinanciado * tasaMensual / (1 - Math.pow(1 + tasaMensual, -plazoFinanciamiento));
+
+    let resultadoTexto =
       `Monto producto: ₡${montoBase.toFixed(2)}\n` +
       `Prima: ₡${prima.toFixed(2)}\n` +
       (conGarantia ? `Monto garantía: ₡${valorGarantia.toFixed(2)}\n` : '') +
       `Gastos formalización (${gastosFormalizacionPct}%): ₡${gastosFormalizacionMonto.toFixed(2)}\n` +
       `Plazo financiamiento: ${plazoFinanciamiento} meses\n` +
-      `Tasa de interés anual: ${tasaAnual}%\n\n` +
-      `CUOTA TOTAL MENSUAL: ₡${cuotaMensual.toFixed(2)}`;
+      `Tasa de interés anual: ${tasaAnual}%\n` +
+      `CUOTA TOTAL MENSUAL: ₡${cuotaTotal.toFixed(2)}`;
 
     document.getElementById('resultado').textContent = resultadoTexto;
+  }
+
+  function plazoGarantiaSelectVisible() {
+    const categoria = document.getElementById('categoria').value;
+    return ['lineaBlanca', 'motocicletas', 'celulares', 'audioVideo', 'electroPequeno', 'mueblesColchones', 'videoJuegos', 'bicicletas'].includes(categoria);
   }
 
   window.onload = actualizarPlazosGarantia;
