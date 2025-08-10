@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Calculador de cuotas Jafeth CG</title>
   <style>
+    /* ... (igual que antes, sin cambios en estilos) */
     body {
       font-family: Arial, sans-serif;
       margin: 0;
@@ -77,6 +78,7 @@
       cursor: pointer;
       font-weight: normal;
       user-select: none;
+      margin-right: 10px;
     }
     .checkbox-container input[type="checkbox"] {
       margin-right: 8px;
@@ -132,7 +134,11 @@
   <div class="checkbox-container">
     <label for="conGarantia">
       <input type="checkbox" id="conGarantia" checked />
-      Con Garantía Extendida
+      Con garantía
+    </label>
+    <label for="conSeguro">
+      <input type="checkbox" id="conSeguro" />
+      Seguro
     </label>
   </div>
 
@@ -142,58 +148,24 @@
 </div>
 
 <script>
-  // Porcentajes de garantía Línea Blanca según plazo (en meses)
-  const garantiaLineaBlancaPorc = {
-    12: 26.99,
-    24: 31.19,
-    36: 35.29,
-    48: 38.87
+  const garantiaPorCategorias = {
+    lineaBlanca: {12: 26.99, 24: 31.19, 36: 35.29, 48: 38.87},
+    motocicletas: {6: 23.04, 18: 25.0, 30: 28.36},
+    celulares: {12: (19767 / 59900) * 100, 24: (24582.96 / 59900) * 100},
+    audioVideo: {12: (68970 / 229900) * 100, 24: (78349.92 / 229900) * 100, 36: (101799.72 / 229900) * 100},
+    electroPequeno: {12: (34818.96 / 119900) * 100, 24: (43164 / 119900) * 100},
+    mueblesColchones: {12: (74772.32 / 300900) * 100, 24: (93880 / 300900) * 100, 36: (114823.44 / 300900) * 100},
+    videoJuegos: {12: (105699.96 / 329900) * 100, 24: (129056.88 / 329900) * 100},
+    bicicletas: {12: (33667.92 / 119900) * 100, 24: (37408.80 / 119900) * 100, 36: (43164 / 119900) * 100}
   };
 
-  // Porcentajes garantía Motocicletas según plazo
-  const garantiaMotocicletasPorc = {
-    6: 23.04,
-    18: 25.0,
-    30: 28.36
-  };
-
-  // Porcentajes garantía Celulares
-  const garantiaCelularesPorc = {
-    12: (19767 / 59900) * 100,      // ≈ 32.99%
-    24: (24582.96 / 59900) * 100   // ≈ 41.05%
-  };
-
-  // Porcentajes garantía Audio y Video
-  const garantiaAudioVideoPorc = {
-    12: (68970 / 229900) * 100,    // ≈ 30.0%
-    24: (78349.92 / 229900) * 100, // ≈ 34.07%
-    36: (101799.72 / 229900) * 100 // ≈ 44.26%
-  };
-
-  // Porcentajes garantía Electro Pequeño
-  const garantiaElectroPequenoPorc = {
-    12: (34818.96 / 119900) * 100, // ≈ 29.04%
-    24: (43164 / 119900) * 100     // ≈ 36.02%
-  };
-
-  // Porcentajes garantía Muebles y Colchones
-  const garantiaMueblesColchonesPorc = {
-    12: (74772.32 / 300900) * 100,  // ≈ 24.86%
-    24: (93880 / 300900) * 100,     // ≈ 31.20%
-    36: (114823.44 / 300900) * 100  // ≈ 38.16%
-  };
-
-  // Porcentajes garantía Video Juegos
-  const garantiaVideoJuegosPorc = {
-    12: (105699.96 / 329900) * 100,  // ≈ 32.05%
-    24: (129056.88 / 329900) * 100   // ≈ 39.13%
-  };
-
-  // Porcentajes garantía Bicicletas
-  const garantiaBicicletasPorc = {
-    12: (33667.92 / 119900) * 100,  // ≈ 28.07%
-    24: (37408.80 / 119900) * 100,  // ≈ 31.22%
-    36: (43164 / 119900) * 100      // ≈ 36.02%
+  const seguroPorcentajePorPlazoFinanciamiento = {
+    6: 1.21,
+    12: 1.22,
+    24: 1.35,
+    36: 1.49,
+    48: 1.63,
+    60: 1.63
   };
 
   function actualizarPlazosGarantia() {
@@ -260,13 +232,14 @@
     const plazoGarantia = parseInt(document.getElementById('plazoGarantia').value);
     const gastosFormalizacionPct = parseFloat(document.getElementById('gastosFormalizacion').value);
     const conGarantia = document.getElementById('conGarantia').checked;
+    const conSeguro = document.getElementById('conSeguro').checked;
 
     if (isNaN(montoBase) || isNaN(prima) || isNaN(tasaAnual) || isNaN(plazoFinanciamiento)) {
       alert('Por favor, complete todos los campos de monto, prima, tasa y plazo de financiamiento con valores válidos.');
       return;
     }
 
-    if (conGarantia && plazoGarantiaSelectVisible() && isNaN(plazoGarantia)) {
+    if (conGarantia && plazoGarantiaRequerido() && isNaN(plazoGarantia)) {
       alert('Por favor, seleccione un plazo de garantía válido.');
       return;
     }
@@ -278,50 +251,45 @@
 
     let valorGarantia = 0;
     if (conGarantia) {
-      switch(categoria) {
-        case 'lineaBlanca':
-          valorGarantia = montoBase * (garantiaLineaBlancaPorc[plazoGarantia] || 0) / 100;
-          break;
-        case 'motocicletas':
-          valorGarantia = montoBase * (garantiaMotocicletasPorc[plazoGarantia] || 0) / 100;
-          break;
-        case 'celulares':
-          valorGarantia = montoBase * (garantiaCelularesPorc[plazoGarantia] || 0) / 100;
-          break;
-        case 'audioVideo':
-          valorGarantia = montoBase * (garantiaAudioVideoPorc[plazoGarantia] || 0) / 100;
-          break;
-        case 'electroPequeno':
-          valorGarantia = montoBase * (garantiaElectroPequenoPorc[plazoGarantia] || 0) / 100;
-          break;
-        case 'mueblesColchones':
-          valorGarantia = montoBase * (garantiaMueblesColchonesPorc[plazoGarantia] || 0) / 100;
-          break;
-        case 'videoJuegos':
-          valorGarantia = montoBase * (garantiaVideoJuegosPorc[plazoGarantia] || 0) / 100;
-          break;
-        case 'bicicletas':
-          valorGarantia = montoBase * (garantiaBicicletasPorc[plazoGarantia] || 0) / 100;
-          break;
-        default:
-          valorGarantia = 0;
+      const garantiaCat = garantiaPorCategorias[categoria];
+      if (garantiaCat && garantiaCat[plazoGarantia]) {
+        valorGarantia = montoBase * (garantiaCat[plazoGarantia] / 100);
       }
     }
 
-    const baseCalculo = montoBase - prima + (conGarantia ? valorGarantia : 0);
+    // Base para gastos formalización y seguro: Producto - Prima + Garantía
+    const baseCalculoSeguro = montoBase - prima + valorGarantia;
 
-    const gastosFormalizacionMonto = baseCalculo * (gastosFormalizacionPct / 100);
+    // Gastos formalización sobre baseCalculoSeguro
+    const gastosFormalizacionMonto = baseCalculoSeguro * (gastosFormalizacionPct / 100);
 
-    const montoFinanciado = baseCalculo + gastosFormalizacionMonto;
+    // Monto sobre el cual se calcula el seguro: producto + garantía + gastos formalización
+    const baseSeguro = baseCalculoSeguro + gastosFormalizacionMonto;
+
+    let valorSeguro = 0;
+    if (conSeguro && seguroPorcentajePorPlazoFinanciamiento[plazoFinanciamiento]) {
+      valorSeguro = baseSeguro * (seguroPorcentajePorPlazoFinanciamiento[plazoFinanciamiento] / 100);
+      if (valorSeguro > 49900) {
+        valorSeguro = 49900;
+      }
+    }
+
+    // Monto total financiado: producto - prima + garantía + gastos formalización (sin seguro)
+    const montoFinanciado = baseCalculoSeguro + gastosFormalizacionMonto;
 
     const tasaMensual = tasaAnual / 100 / 12;
 
-    const cuotaTotal = montoFinanciado * tasaMensual / (1 - Math.pow(1 + tasaMensual, -plazoFinanciamiento));
+    // Calculamos la cuota mensual sin seguro (intereses incluidos)
+    const cuotaSinSeguro = montoFinanciado * tasaMensual / (1 - Math.pow(1 + tasaMensual, -plazoFinanciamiento));
+
+    // Cuota total = cuota + seguro (el seguro es un monto único que se suma)
+    const cuotaTotal = conSeguro ? cuotaSinSeguro + valorSeguro : cuotaSinSeguro;
 
     let resultadoTexto =
       `Monto producto: ₡${montoBase.toFixed(2)}\n` +
       `Prima: ₡${prima.toFixed(2)}\n` +
       (conGarantia ? `Monto garantía: ₡${valorGarantia.toFixed(2)}\n` : '') +
+      (conSeguro ? `Monto seguro (máx ₡49,900): ₡${valorSeguro.toFixed(2)}\n` : '') +
       `Gastos formalización (${gastosFormalizacionPct}%): ₡${gastosFormalizacionMonto.toFixed(2)}\n` +
       `Plazo financiamiento: ${plazoFinanciamiento} meses\n` +
       `Tasa de interés anual: ${tasaAnual}%\n` +
@@ -330,9 +298,9 @@
     document.getElementById('resultado').textContent = resultadoTexto;
   }
 
-  function plazoGarantiaSelectVisible() {
-    const categoria = document.getElementById('categoria').value;
-    return ['lineaBlanca', 'motocicletas', 'celulares', 'audioVideo', 'electroPequeno', 'mueblesColchones', 'videoJuegos', 'bicicletas'].includes(categoria);
+  function plazoGarantiaRequerido() {
+    const cat = document.getElementById('categoria').value;
+    return ['lineaBlanca', 'motocicletas', 'celulares', 'audioVideo', 'electroPequeno', 'mueblesColchones', 'videoJuegos', 'bicicletas'].includes(cat);
   }
 
   window.onload = actualizarPlazosGarantia;
